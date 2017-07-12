@@ -69,8 +69,8 @@ public class PayController {
 			parm.put("mch_id", ConstValue.MCH_ID);
 			parm.put("device_info", "WEB"); // 设备号，默认为“WEB”
 			parm.put("nonce_str", PayUtil.getNonceStr()); // 随机数
-			parm.put("body", "智能心贴-实时长程监护缴费"); // 商品描述
-			parm.put("attach", "瑞康宏业"); // 附加信息
+			parm.put("body", "QQ游戏-充值"); // 商品描述
+			parm.put("attach", "XXXX公司"); // 附加信息
 			parm.put("out_trade_no", PayUtil.getTradeNo()); // 商户内部管控的订单号
 			parm.put("total_fee", total_fee); // 总费用：单位-分
 			parm.put("spbill_create_ip", PayUtil.getRemoteAddrIp(request)); // 获取客户端的IP地址
