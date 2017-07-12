@@ -2,14 +2,15 @@ package com.rencare.pay.utils;
 
 public class ConstValue {
 	
-	// 支付回调URL路径
-	public static final String NOTIFY_URL = "https://www.andy.co/wxpay/order/pay/notify.shtml";
     public static final String CUSTODY_TYPE_LONG = "1";
     public static final String CUSTODY_TYPE_REALTIME_LONG = "2";
     // 支付成功
     public static final String PAY_SUCCESS = "SUCCESS";
     // 支付失败
     public static final String PAY_FAIL = "FAIL";
+    
+    //微信支付成功后通知地址 必须要求80端口并且地址不能带参数
+  	public static final String NOTIFY_URL = "http://**.**.**.**:8080/rencare/pay/notify";
     
     public static final String ORDER_PAY = "https://api.mch.weixin.qq.com/pay/unifiedorder"; // 统一下单
 
