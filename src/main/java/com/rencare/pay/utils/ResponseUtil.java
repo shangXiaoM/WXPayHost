@@ -5,11 +5,11 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.rencare.pay.ControllerApplication;
+import com.rencare.pay.Application;
 
 
 public class ResponseUtil {
-	private static final Logger LOG = Logger.getLogger(ControllerApplication.class);
+	private static final Logger LOG = Logger.getLogger(Application.class);
 
 	private ResponseUtil() {
 		super();
