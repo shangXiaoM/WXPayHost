@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;  
+import org.xmlpull.v1.XmlPullParserFactory;
 
 /**
  * 创建时间：2016年11月3日 上午11:40:17
@@ -70,7 +70,9 @@ public class XmlUtil {
 		Map<String, String> map = null;
 		if (StringUtil.isNotEmpty(xml)) {
 			InputStream inputStream = new ByteArrayInputStream(xml.getBytes());
-			XmlPullParser pullParser = XmlPullParserFactory.newInstance().newPullParser();
+			 // pull
+			XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+			XmlPullParser pullParser = factory.newPullParser();
 			pullParser.setInput(inputStream, "UTF-8"); // 为xml设置要解析的xml数据
 			int eventType = pullParser.getEventType();
 

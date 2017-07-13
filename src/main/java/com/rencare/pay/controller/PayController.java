@@ -51,7 +51,7 @@ public class PayController {
 	public void orderPay(HttpServletRequest request, HttpServletResponse response,
 			@RequestParam(required = false, defaultValue = "0") Double cashnum, String mercid, String callback) {
 		LOG.info("[/rencare/pay]");
-		if (!ConstValue.CUSTODY_TYPE_LONG.equals(mercid) || !ConstValue.CUSTODY_TYPE_REALTIME_LONG.equals(mercid)) {
+		if (!ConstValue.CUSTODY_TYPE_LONG.equals(mercid) && !ConstValue.CUSTODY_TYPE_REALTIME_LONG.equals(mercid)) {
 			String json = JSON.toJSONString(
 					new JsonResult(ConstValue.RESPONSE_CODE_NO_THINGS, "商品不存在", new ResponseData()),
 					SerializerFeatureUtil.FEATURES);
