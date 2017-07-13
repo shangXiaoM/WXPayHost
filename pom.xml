@@ -58,18 +58,28 @@
 
 		<!-- xml -->
 		<dependency>
-			<groupId>xmlpull</groupId>
-			<artifactId>xmlpull</artifactId>
-			<version>1.1.3.1</version>
+			<groupId>org.apache.servicemix.bundles</groupId>
+			<artifactId>org.apache.servicemix.bundles.xpp3</artifactId>
+			<version>1.1.4c_4</version>
 		</dependency>
 	</dependencies>
 
-<!--maven的插件-->
+	<!--maven的插件 -->
 	<build>
+		<finalName>WXPay</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<!-- 过滤后缀为pem、pfx、p12的证书文件 -->
+					<nonFilteredFileExtensions>
+						<nonFilteredFileExtension>pem</nonFilteredFileExtension>
+						<nonFilteredFileExtension>pfx</nonFilteredFileExtension>
+						<nonFilteredFileExtension>p12</nonFilteredFileExtension>
+					</nonFilteredFileExtensions>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
