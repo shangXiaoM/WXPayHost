@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rencare.pay.dao.PayMapper">
+
+	<!-- 已在application.properties中配置了entity的包路径 -->
+	<resultMap id="payInfo" type="PayInfo">
+		<result property="id" column="id" />
+		<result property="mAppId" column="appid" />
+		<result property="mMchId" column="mch_id" />
+		<result property="mTradeType" column="trade_type" />
+		<result property="mPrepayId" column="prepay_id" />
+		<result property="mBody" column="body" />
+		<result property="mOutTradeNo" column="out_trade_no" />
+		<result property="mTotalFee" column="total_fee" />
+		<result property="mBankType" column="bank_type" />
+		<result property="mTransactionId" column="transaction_id" />
+		<result property="mTimeEnd" column="time_end" />
+		<result property="mCashFee" column="cash_fee" />
+	</resultMap>
+
+	<select id="queryByOTN" parameterType="string" resultMap="payInfo"
+		resultType="PayInfo" timeout="5000">
+		SELECT
+		*
+		FROM PAYINFO
+		WHERE out_trade_no =
+		#{outTradeNo}
+	</select>
+
+	<select id="queryByPreId" parameterType="string" resultMap="payInfo"
+		resultType="PayInfo" timeout="5000">
+		SELECT
+		*
+		FROM PAYINFO
+		WHERE prepay_id =
+		#{prepayId}
+	</select>
+
+	<insert id="insertPayInfo" parameterType="PayInfo"
+		useGeneratedKeys="true" keyProperty="id" timeout="5000">
+		insert into payinfo
+		(appid,mch_id,trade_type,prepay_id,body,out_trade_no,total_fee,bank_type,transaction_id,time_end,cash_fee)
+		values(#{mAppId}, #{mMchId}, #{mTradeType}, #{mPrepayId}, #{mBody},
+		#{mOutTradeNo}, #{mTotalFee}, #{mBankType}, #{mTransactionId},
+		#{mTimeEnd}, #{mCashFee})
+	</insert>
+
+	<update id="updatePayInfo" parameterType="PayInfo" timeout="5000">
+		update payinfo set
+		bank_type = #{mBankType},
+		transaction_id =
+		#{mTransactionId},
+		time_end = #{mTimeEnd},
+		cash_fee = #{mCashFee}
+		where
+		id = #{id}
+	</update>
+
+</mapper>
