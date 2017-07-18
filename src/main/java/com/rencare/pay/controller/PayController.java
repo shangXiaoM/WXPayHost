@@ -1,5 +1,6 @@
 package com.rencare.pay.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,12 +10,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.xmlpull.v1.XmlPullParserException;
 
 import com.alibaba.fastjson.JSON;
+import com.rencare.pay.dao.PayMapper;
+import com.rencare.pay.entity.PayInfo;
 import com.rencare.pay.model.JsonResult;
 import com.rencare.pay.model.ResponseData;
 import com.rencare.pay.utils.CollectionUtil;
@@ -28,11 +33,17 @@ import com.rencare.pay.utils.StringUtil;
 import com.rencare.pay.utils.WebUtil;
 import com.rencare.pay.utils.XmlUtil;
 
+import rx.Observable;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
+
 @RestController
 @RequestMapping("/rencare")
 public class PayController {
 
 	private static final Logger LOG = Logger.getLogger(PayController.class);
+	@Autowired
+	private PayMapper mPayMapper;
 
 	/**
 	 * 统一下单API
@@ -61,17 +72,19 @@ public class PayController {
 
 		Map<String, String> restmap = null;
 		boolean flag = false; // 是否订单创建成功
+		String body = "QQ游戏-充值";
+		String mchTradeNo = PayUtil.getTradeNo();
+		String total_fee = BigDecimal.valueOf(cashnum).multiply(BigDecimal.valueOf(100))
+				.setScale(0, BigDecimal.ROUND_HALF_UP).toString();
 		try {
-			String total_fee = BigDecimal.valueOf(cashnum).multiply(BigDecimal.valueOf(100))
-					.setScale(0, BigDecimal.ROUND_HALF_UP).toString();
 			Map<String, String> parm = new HashMap<String, String>();
 			parm.put("appid", ConstValue.APP_ID);
 			parm.put("mch_id", ConstValue.MCH_ID);
 			parm.put("device_info", "WEB"); // 设备号，默认为“WEB”
 			parm.put("nonce_str", PayUtil.getNonceStr()); // 随机数
-			parm.put("body", "QQ游戏-充值"); // 商品描述
+			parm.put("body", body); // 商品描述
 			parm.put("attach", "XXXX公司"); // 附加信息
-			parm.put("out_trade_no", PayUtil.getTradeNo()); // 商户内部管控的订单号
+			parm.put("out_trade_no", mchTradeNo); // 商户内部管控的订单号
 			parm.put("total_fee", total_fee); // 总费用：单位-分
 			parm.put("spbill_create_ip", PayUtil.getRemoteAddrIp(request)); // 获取客户端的IP地址
 			parm.put("notify_url", ConstValue.NOTIFY_URL); // 微信服务器异步通知支付结果地址
@@ -92,12 +105,19 @@ public class PayController {
 				// 下单成功
 				payMap.put("appid", ConstValue.APP_ID);
 				payMap.put("partnerid", ConstValue.MCH_ID);
-				payMap.put("prepayid", restmap.get("prepay_id"));
+				String prepayId = restmap.get("prepay_id");
+				payMap.put("prepayid", prepayId);
 				payMap.put("package", "Sign=WXPay");
 				payMap.put("noncestr", PayUtil.getNonceStr());
 				payMap.put("timestamp", PayUtil.payTimestamp());
 				try {
 					payMap.put("sign", PayUtil.getSign(payMap, ConstValue.API_SECRET));
+					Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
+						@Override
+						public void call(String arg0) {
+							insertPayInfo(body, mchTradeNo, prepayId, total_fee, "APP");
+						}
+					});
 				} catch (Exception e) {
 					e.printStackTrace();
 					flag = false;
@@ -120,36 +140,67 @@ public class PayController {
 	}
 
 	/**
-	 * 查询支付结果：商户后台主动查询微信支付服务器，该订单的支付情况（用于商户服务器异常，没有收到微信支付服务器的支付回调时）
+	 * 支付客户端查询支付结果
 	 * 
 	 * @param request
 	 * @param response
-	 * @param tradeid
-	 *            微信交易订单号
-	 * @param tradeno
-	 *            商品订单号(商户内部维护)
-	 * @param callback
 	 */
 	@RequestMapping(value = "/pay/query", method = { RequestMethod.POST, RequestMethod.GET })
-	public void orderPayQuery(HttpServletRequest request, HttpServletResponse response, String tradeid, String tradeno,
+	public void payQuery(HttpServletRequest request, HttpServletResponse response) {
+		String prepayId = request.getParameter("prepay_id");
+		String json = null;
+		PayInfo payInfo = null;
+		if (null != prepayId) {
+			payInfo = mPayMapper.queryByPreId(prepayId);
+		}
+		if (null != payInfo) {
+			if (isProgress(payInfo)) { // 已付款
+				// 订单状态：支付成功
+				json = JSON.toJSONString(
+						new JsonResult(ConstValue.RESPONSE_CODE_QUERY_PAID_SUCCESS, "订单支付成功", new ResponseData()),
+						SerializerFeatureUtil.FEATURES);
+				WebUtil.response(response, WebUtil.packJsonp(null, json));
+			} else { // 未付款
+				payNotifyQuery(request, response, payInfo, null);
+			}
+		} else {
+			json = JSON.toJSONString(
+					new JsonResult(ConstValue.RESPONSE_CODE_GET_PAYID_FAIL, "订单获取失败", new ResponseData()),
+					SerializerFeatureUtil.FEATURES);
+			WebUtil.response(response, WebUtil.packJsonp(null, json));
+		}
+
+	}
+
+	/**
+	 * 查询支付结果：商户后台主动查询微信支付服务器，该订单的支付情况（用于商户服务器异常，没有收到微信支付服务器的支付回调,且手机客户端查询付款状态时）
+	 * 
+	 * @param request
+	 * @param response
+	 * @param payInfo
+	 *            订单信息
+	 * @param callback
+	 */
+	public void payNotifyQuery(HttpServletRequest request, HttpServletResponse response, PayInfo payInfo,
 			String callback) {
-		LOG.info("[/rencare/pay/query]");
-		if (StringUtil.isEmpty(tradeno) && StringUtil.isEmpty(tradeid)) {
+		// 商户订单号和微信支付订单号二选一，没有收到支付通知时，只能选择商户订单号，其他情况优先选择微信支付订单号
+		String transactionId = payInfo.getmTransactionId();
+		String outTradeNo = payInfo.getmOutTradeNo();
+		if (StringUtil.isEmpty(outTradeNo) && StringUtil.isEmpty(transactionId)) {
 			String json = JSON.toJSONString(
 					new JsonResult(ConstValue.RESPONSE_CODE_EMPTY_PAYID, "订单号不能为空", new ResponseData()),
 					SerializerFeatureUtil.FEATURES);
 			WebUtil.response(response, WebUtil.packJsonp(callback, json));
 			return;
 		}
-
 		String json = null;
 		Map<String, String> restmap = null;
 		try {
 			Map<String, String> parm = new HashMap<String, String>();
 			parm.put("appid", ConstValue.APP_ID);
 			parm.put("mch_id", ConstValue.MCH_ID);
-			parm.put("transaction_id", tradeid); // 微信订单号（优先使用）
-			parm.put("out_trade_no", tradeno); // 商户订单号（但没有传transaction_id时，使用该订单号）
+			parm.put("transaction_id", transactionId); // 微信订单号（优先使用）
+			parm.put("out_trade_no", outTradeNo); // 商户订单号（但没有传transaction_id时，使用该订单号）
 			parm.put("nonce_str", PayUtil.getNonceStr());
 			parm.put("sign", PayUtil.getSign(parm, ConstValue.API_SECRET));
 
@@ -161,6 +212,16 @@ public class PayController {
 
 		if (ResponseUtil.isResponseSuccess(restmap)) {
 			if (ConstValue.PAY_SUCCESS.equals(restmap.get("result_code"))) {
+				payInfo.setmBankType(restmap.get("bank_type"));
+				payInfo.setmTransactionId(restmap.get("transaction_id"));
+				payInfo.setmTimeEnd(restmap.get("time_end"));
+				payInfo.setmCashFee(restmap.get("cash_fee"));
+				Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
+					@Override
+					public void call(String arg0) {
+						mPayMapper.updatePayInfo(payInfo);
+					}
+				});
 				// 订单状态：支付成功
 				json = JSON.toJSONString(
 						new JsonResult(ConstValue.RESPONSE_CODE_QUERY_PAID_SUCCESS, "订单支付成功", new ResponseData()),
@@ -171,7 +232,6 @@ public class PayController {
 						new JsonResult(ConstValue.RESPONSE_CODE_QUERY_PAID_FAIL, "订单支付失败", new ResponseData()),
 						SerializerFeatureUtil.FEATURES);
 			}
-			// 处理业务逻辑，更新对应的数据库信息等
 		} else {
 			json = JSON.toJSONString(new JsonResult(ConstValue.RESPONSE_CODE_QUERY_FAIL, "订单查询失败", new ResponseData()),
 					SerializerFeatureUtil.FEATURES);
@@ -196,21 +256,30 @@ public class PayController {
 		String return_msg = null;
 		try {
 			ServletInputStream in = request.getInputStream();
+			// 获取支付结果通知
 			String resxml = FileUtil.readInputStream2String(in);
 			Map<String, String> restmap = XmlUtil.xmlParse(resxml);
-			LOG.info("支付结果通知：" + restmap);
 			if (ResponseUtil.isResponseSuccess(restmap)) {
 				flag = true;
-				String out_trade_no = restmap.get("out_trade_no"); // 商户订单号
 				// 通过商户订单判断是否该订单已经处理 如果处理跳过 如果则进行订单业务相关的处理
-				if (!false) {
+				PayInfo payInfo = mPayMapper.queryByOTN(restmap.get("out_trade_no"));
+				if (isProgress(payInfo)) {
 					if (ConstValue.PAY_SUCCESS.equals(restmap.get("result_code"))) {
 						// 订单状态：支付成功
+						payInfo.setmBankType(restmap.get("bank_type"));
+						payInfo.setmTransactionId(restmap.get("transaction_id"));
+						payInfo.setmTimeEnd(restmap.get("time_end"));
+						payInfo.setmCashFee(restmap.get("cash_fee"));
+						Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
+							@Override
+							public void call(String arg0) {
+								mPayMapper.updatePayInfo(payInfo);
+							}
+						});
 					} else {
 						// 订单状态：支付失败
 						LOG.info("订单支付通知：支付失败，" + restmap.get("err_code") + ":" + restmap.get("err_code_des"));
 					}
-					// 处理业务逻辑，更新对应的数据库信息等
 				}
 			} else {
 				return_msg = "签名失败，或return_code为FAIL!";
@@ -352,6 +421,48 @@ public class PayController {
 			WebUtil.response(response, WebUtil.packJsonp(callback, JSON
 					.toJSONString(new JsonResult(-1, "订单退款失败", new ResponseData()), SerializerFeatureUtil.FEATURES)));
 		}
+	}
+
+	/**
+	 * 统一下单成功，插入支付信息到数据库
+	 * 
+	 * @param body
+	 *            商品描述
+	 * @param mchTradeNo
+	 *            商户订单号
+	 * @param prepayId
+	 *            预支付订单号
+	 * @param totalFee
+	 *            总金额
+	 * @param tradeType
+	 *            交易类型：APP
+	 */
+	private void insertPayInfo(String body, String mchTradeNo, String prepayId, String totalFee, String tradeType) {
+		PayInfo payInfo = new PayInfo();
+		payInfo.setmAppId(ConstValue.APP_ID);
+		payInfo.setmMchId(ConstValue.MCH_ID);
+		payInfo.setmBody(body);
+		payInfo.setmOutTradeNo(mchTradeNo);
+		payInfo.setmPrepayId(prepayId);
+		payInfo.setmTotalFee(totalFee);
+		payInfo.setmTradeType(tradeType);
+		mPayMapper.insertPayInfo(payInfo);
+	}
+
+	/**
+	 * 根据订单信息，判断是否需要处理支付结果通知的业务逻辑
+	 * 
+	 * @param payInfo
+	 *            订单信息
+	 * @return
+	 */
+	private boolean isProgress(PayInfo payInfo) {
+		boolean flag = false;
+		if (StringUtil.isNotEmpty(payInfo.getmCashFee())
+				&& payInfo.getmTotalFee().equalsIgnoreCase(payInfo.getmCashFee())) {
+			flag = true;
+		}
+		return flag;
 	}
 
 }
