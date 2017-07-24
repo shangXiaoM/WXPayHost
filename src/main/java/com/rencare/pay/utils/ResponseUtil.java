@@ -24,11 +24,11 @@ public class ResponseUtil {
 		boolean flag = false;
 		if (CollectionUtil.isNotEmpty(restmap)) { // 应答不为null
 			if (ConstValue.PAY_SUCCESS.equals(restmap.get("return_code"))) {
-				String sing = restmap.get("sign"); // 返回的签名
+				String sign = restmap.get("sign"); // 返回的签名
 				restmap.remove("sign");
 				try {
 					String signnow = PayUtil.getSign(restmap, ConstValue.API_SECRET);
-					if (signnow.equals(sing)) { // 签名成功
+					if (signnow.equals(sign)) { // 签名成功
 						flag = true;
 					} else {
 						LOG.info("返回的签名错误！");

@@ -17,6 +17,8 @@
 		<result property="mTransactionId" column="transaction_id" />
 		<result property="mTimeEnd" column="time_end" />
 		<result property="mCashFee" column="cash_fee" />
+		<result property="mPayState" column="pay_state" />
+		<result property="mNotifyState" column="notify_state" />
 	</resultMap>
 
 	<select id="queryByOTN" parameterType="string" resultMap="payInfo"
@@ -40,10 +42,10 @@
 	<insert id="insertPayInfo" parameterType="PayInfo"
 		useGeneratedKeys="true" keyProperty="id" timeout="5000">
 		insert into payinfo
-		(appid,mch_id,trade_type,prepay_id,body,out_trade_no,total_fee,bank_type,transaction_id,time_end,cash_fee)
+		(appid,mch_id,trade_type,prepay_id,body,out_trade_no,total_fee,bank_type,transaction_id,time_end,cash_fee,pay_state,notify_state)
 		values(#{mAppId}, #{mMchId}, #{mTradeType}, #{mPrepayId}, #{mBody},
 		#{mOutTradeNo}, #{mTotalFee}, #{mBankType}, #{mTransactionId},
-		#{mTimeEnd}, #{mCashFee})
+		#{mTimeEnd}, #{mCashFee}, #{mPayState}, #{mNotifyState})
 	</insert>
 
 	<update id="updatePayInfo" parameterType="PayInfo" timeout="5000">
