@@ -10,7 +10,7 @@ public class ConstValue {
     public static final String PAY_FAIL = "FAIL";
     
     //微信支付成功后通知地址 必须要求80端口并且地址不能带参数
-  	public static final String NOTIFY_URL = "http://**.**.**.**:8080/rencare/pay/notify";
+  	public static final String NOTIFY_URL = "http://8jrrth.natappfree.cc/rencare/pay/notify";
     
     public static final String ORDER_PAY = "https://api.mch.weixin.qq.com/pay/unifiedorder"; // 统一下单
 
@@ -30,34 +30,34 @@ public class ConstValue {
 	/**
 	 * 没有商品
 	 */
-	public static final int RESPONSE_CODE_NO_THINGS = -501;
+	public static final int RESPONSE_CODE_NO_THINGS = -100;
 	/**
 	 * 统一下单失败
 	 */
-	public static final int RESPONSE_CODE_GET_PAYID_FAIL = -102;
+	public static final int RESPONSE_CODE_GET_PAYID_FAIL = -101;
 	/**
 	 * 统一下单成功
 	 */
-	public static final int RESPONSE_CODE_GET_PAYID_SUCCESS = 101;
+	public static final int RESPONSE_CODE_GET_PAYID_SUCCESS = 100;
 	
 	/**
 	 * 订单号为空
 	 */
-	public static final int RESPONSE_CODE_EMPTY_PAYID = -502;
+	public static final int RESPONSE_CODE_EMPTY_PAYID = -200;
 	/**
 	 * 查询订单成功
 	 */
-	public static final int RESPONSE_CODE_QUERY_SUCCESS = 201;
+	public static final int RESPONSE_CODE_QUERY_SUCCESS = 200;
 	/**
 	 * 查询订单失败
 	 */
-	public static final int RESPONSE_CODE_QUERY_FAIL = 202;
+	public static final int RESPONSE_CODE_QUERY_FAIL = -201;
 	/**
 	 * 查询订单支付成功
 	 */
-	public static final int RESPONSE_CODE_QUERY_PAID_SUCCESS = 203;
+	public static final int RESPONSE_CODE_QUERY_PAID_SUCCESS = 201;
 	/**
 	 * 查询订单支付失败
 	 */
-	public static final int RESPONSE_CODE_QUERY_PAID_FAIL = 204;
+	public static final int RESPONSE_CODE_QUERY_PAID_FAIL = -202;
 }

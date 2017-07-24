@@ -17,6 +17,8 @@ public class PayInfo implements Serializable{
 	private String mTransactionId;	// 微信支付订单号
 	private String mTimeEnd;	// 交易完成时间
 	private String mCashFee;	// 支付金额
+	private int mPayState;	// 支付状态：1支付成功，0未支付
+	private int mNotifyState;	// 通知状态：1已通知，0未通知
 	
 	public int getId() {
 		return id;
@@ -89,6 +91,18 @@ public class PayInfo implements Serializable{
 	}
 	public void setmCashFee(String mCashFee) {
 		this.mCashFee = mCashFee;
+	}
+	public int getmPayState() {
+		return mPayState;
+	}
+	public void setmPayState(int mPayState) {
+		this.mPayState = mPayState;
+	}
+	public int getmNotifyState() {
+		return mNotifyState;
+	}
+	public void setmNotifyState(int mNotifyState) {
+		this.mNotifyState = mNotifyState;
 	}
 	public static long getSerialversionuid() {
 		return serialVersionUID;

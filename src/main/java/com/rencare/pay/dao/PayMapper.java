@@ -39,4 +39,5 @@ public interface PayMapper {
 	 * @return
 	 */
 	PayInfo queryByPreId(String prepayId);
+	
 }
