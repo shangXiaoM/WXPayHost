@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -25,7 +26,7 @@ public class PayUtil {
 	 */
 	public static String getTradeNo() {
 		// 自增8位数 00000001
-		return "TNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + "00000001";
+		return "TNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + getRandomNo();
 	}
 
 	/**
@@ -34,8 +35,8 @@ public class PayUtil {
 	 * @return
 	 */
 	public static String getRefundNo() {
-		// 自增8位数 00000001
-		return "RNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + "00000001";
+		// 随机8位数字
+		return "RNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + getRandomNo();
 	}
 
 	/**
@@ -44,10 +45,10 @@ public class PayUtil {
 	 * @return
 	 */
 	public static String getTransferNo() {
-		// 自增8位数 00000001
-		return "TNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + "00000001";
+		// 随机8位数字
+		return "TNO" + DatetimeUtil.formatDate(new Date(), DatetimeUtil.TIME_STAMP_PATTERN) + getRandomNo();
 	}
-
+	
 	/**
 	 * 返回客户端ip
 	 * 
@@ -137,5 +138,13 @@ public class PayUtil {
 	 */
 	public static String payTimestamp() {
 		return Long.toString(System.currentTimeMillis() / 1000);
+	}
+	
+	/**
+	 * 创建随机8位订单尾号
+	 * @return
+	 */
+	private static String getRandomNo() {
+		return RandomUtil.randomString(RandomUtil.LETTER_NUMBER_CHAR, 8);
 	}
 }

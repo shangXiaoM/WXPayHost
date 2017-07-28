@@ -45,14 +45,16 @@ public class HttpUtils {
 	private static SSLContext wx_ssl_context = null; // 微信支付ssl证书
 
 	static {
-		Resource resource = new ClassPathResource("wx_apiclient_cert.p12");
-		try {
-			KeyStore keystore = KeyStore.getInstance("PKCS12");
-			char[] keyPassword = ConfigUtil.getProperty("wx.mchid").toCharArray(); // 证书密码
-			keystore.load(resource.getInputStream(), keyPassword);
-			wx_ssl_context = SSLContexts.custom().loadKeyMaterial(keystore, keyPassword).build();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (null == wx_ssl_context) {
+			Resource resource = new ClassPathResource("apiclient_cert.p12");
+			try {
+				KeyStore keystore = KeyStore.getInstance("PKCS12");
+				char[] keyPassword = ConfigUtil.getProperty("wx.mchid").toCharArray(); // 证书密码
+				keystore.load(resource.getInputStream(), keyPassword);
+				wx_ssl_context = SSLContexts.custom().loadKeyMaterial(keystore, keyPassword).build();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
