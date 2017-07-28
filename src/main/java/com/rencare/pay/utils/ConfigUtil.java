@@ -37,7 +37,6 @@ public class ConfigUtil {
 				}
 			}
 		}
-
 		return config.getProperty(key);
 	}
 }

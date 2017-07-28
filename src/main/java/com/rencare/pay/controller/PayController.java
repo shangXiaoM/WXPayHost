@@ -1,5 +1,6 @@
 package com.rencare.pay.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.xmlpull.v1.XmlPullParserException;
 
 import com.alibaba.fastjson.JSON;
 import com.rencare.pay.dao.PayMapper;
@@ -42,6 +44,7 @@ public class PayController {
 	private static final Logger LOG = Logger.getLogger(PayController.class);
 	@Autowired
 	private PayMapper mPayMapper;
+	public static String API_KEY = ConstValue.API_SECRET;
 
 	/**
 	 * 统一下单API
@@ -71,9 +74,18 @@ public class PayController {
 		Map<String, String> restmap = null;
 		// 创建支付账单是否成功
 		boolean flag = false;
-		String body = "QQ游戏-充值"; // 测试内容
+		String temp = null;
 		// 生成商户订单号
 		String mchTradeNo = PayUtil.getTradeNo();
+		if (ConstValue.CUSTODY_TYPE_LONG.equals(mercid)) { // 长程监护价格
+			cashnum = 0.01d;
+			temp = "智能心贴-长程监护";
+		} else if (ConstValue.CUSTODY_TYPE_REALTIME_LONG.equals(mercid)) { //
+			// 长程+实时监护价格
+			cashnum = 0.02d;
+			temp = "智能心贴-实时长程监护";
+		}
+		final String body = temp;
 		String total_fee = BigDecimal.valueOf(cashnum).multiply(BigDecimal.valueOf(100))
 				.setScale(0, BigDecimal.ROUND_HALF_UP).toString();
 		try {
@@ -89,7 +101,12 @@ public class PayController {
 			parm.put("spbill_create_ip", PayUtil.getRemoteAddrIp(request)); // 获取客户端的IP地址
 			parm.put("notify_url", ConstValue.NOTIFY_URL); // 微信服务器异步通知支付结果地址
 			parm.put("trade_type", "APP"); // 支付类型：APP支付
-			parm.put("sign", PayUtil.getSign(parm, ConstValue.API_SECRET)); // 签名
+			parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 签名
+			// // 对接仿真系统测试
+			// SANDBOX_KEY = null;
+			// getSandParams(parm);
+			// parm.remove("sign");
+			// parm.put("sign", PayUtil.getSign(parm, SANDBOX_KEY)); // 再签名
 
 			String restxml = HttpUtils.post(ConstValue.ORDER_PAY, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
@@ -111,7 +128,7 @@ public class PayController {
 				payMap.put("noncestr", PayUtil.getNonceStr());
 				payMap.put("timestamp", PayUtil.payTimestamp());
 				try {
-					payMap.put("sign", PayUtil.getSign(payMap, ConstValue.API_SECRET));
+					payMap.put("sign", PayUtil.getSign(payMap, API_KEY));
 					Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
 						@Override
 						public void call(String arg0) {
@@ -206,11 +223,14 @@ public class PayController {
 			Map<String, String> parm = new HashMap<String, String>();
 			parm.put("appid", ConstValue.APP_ID);
 			parm.put("mch_id", ConstValue.MCH_ID);
-			parm.put("transaction_id", transactionId); // 微信订单号（优先使用）
-			parm.put("out_trade_no", outTradeNo); // 商户订单号（但没有传transaction_id时，使用该订单号）
-			parm.put("nonce_str", PayUtil.getNonceStr());
-			parm.put("sign", PayUtil.getSign(parm, ConstValue.API_SECRET));
+			if (StringUtil.isNotEmpty(transactionId)) {
+				parm.put("transaction_id", transactionId); // 微信订单号（优先使用）
+			} else {
+				parm.put("out_trade_no", outTradeNo); // 商户订单号（但没有传transaction_id时，使用该订单号）
+			}
 
+			parm.put("nonce_str", PayUtil.getNonceStr());
+			parm.put("sign", PayUtil.getSign(parm, API_KEY));
 			String restxml = HttpUtils.post(ConstValue.ORDER_PAY_QUERY, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
 		} catch (Exception e) {
@@ -223,7 +243,7 @@ public class PayController {
 		}
 		// 验证return_code和签名
 		if (ResponseUtil.isResponseSuccess(restmap)) {
-			json = progressNotify(restmap);
+			json = progressNotify(restmap, true);
 			if (null == json) {
 				json = JSON.toJSONString(
 						new JsonResult(ConstValue.RESPONSE_CODE_QUERY_FAIL, "订单查询失败", new ResponseData()),
@@ -246,8 +266,8 @@ public class PayController {
 	 */
 	@RequestMapping("/pay/notify")
 	public void payNotify(HttpServletRequest request, HttpServletResponse response) {
-		boolean flag = false;
 		LOG.info("[/rencare/pay/notify]");
+		boolean flag = true;
 		response.setCharacterEncoding("UTF-8");
 		response.setContentType("text/xml");
 		String return_msg = null;
@@ -260,9 +280,7 @@ public class PayController {
 			if (ResponseUtil.isResponseSuccess(restmap)) {
 				flag = true;
 				// 判断订单是否已经通知处理过
-				if (!isNotified(restmap)) {
-					progressNotify(restmap);
-				}
+				return_msg = progressNotify(restmap, false);
 			} else {
 				return_msg = "签名失败，或return_code为FAIL!";
 			}
@@ -315,7 +333,7 @@ public class PayController {
 			parm.put("refund_fee", "10"); // 退款金额
 			parm.put("op_user_id", ConstValue.MCH_ID);
 			parm.put("refund_account", "REFUND_SOURCE_RECHARGE_FUNDS");// 退款方式
-			parm.put("sign", PayUtil.getSign(parm, ConstValue.API_SECRET));
+			parm.put("sign", PayUtil.getSign(parm, API_KEY));
 			String restxml = HttpUtils.posts(ConstValue.ORDER_REFUND, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
 		} catch (Exception e) {
@@ -377,7 +395,7 @@ public class PayController {
 			parm.put("refund_id", refundid);
 			parm.put("out_refund_no", refundno);
 			parm.put("nonce_str", PayUtil.getNonceStr());
-			parm.put("sign", PayUtil.getSign(parm, ConstValue.API_SECRET));
+			parm.put("sign", PayUtil.getSign(parm, API_KEY));
 
 			String restxml = HttpUtils.post(ConstValue.ORDER_REFUND_QUERY, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
@@ -448,7 +466,7 @@ public class PayController {
 			String endTime = payInfo.getmTimeEnd();
 			String transactionId = payInfo.getmTransactionId();
 			// 缴费截止时间相等
-			boolean endTEQ = StringUtil.isNotEmpty(endTime) && endTime.equalsIgnoreCase(restmap.get("out_trade_no"));
+			boolean endTEQ = StringUtil.isNotEmpty(endTime) && endTime.equalsIgnoreCase(restmap.get("time_end"));
 			// 微信支付订单号相同
 			boolean transactionIdEQ = StringUtil.isNotEmpty(transactionId)
 					&& transactionId.equalsIgnoreCase(restmap.get("transaction_id"));
@@ -466,12 +484,18 @@ public class PayController {
 	 * @param payInfo
 	 * @return
 	 */
-	private boolean verifyNotify(Map<String, String> restmap, PayInfo payInfo) {
+	private boolean verifyNotify(Map<String, String> restmap, PayInfo payInfo, boolean isQuery) {
 		boolean flag = false;
 		if (restmap.get("total_fee").equals(payInfo.getmTotalFee())) { // 支付金额正确
 			if (ConstValue.MCH_ID.equals(restmap.get("mch_id"))) { // 商户号相同
 				if (ConstValue.PAY_SUCCESS.equals(restmap.get("result_code"))) {
-					flag = true;
+					if (isQuery) { // 查询订单支付情况，需要根据trade_state判断是否支付成功
+						if (ConstValue.PAY_SUCCESS.equals(restmap.get("trade_state"))) {
+							flag = true;
+						}
+					} else {
+						flag = true;
+					}
 				}
 			}
 		}
@@ -485,20 +509,24 @@ public class PayController {
 	 * @param payInfo
 	 * @return
 	 */
-	private String progressNotify(Map<String, String> restmap) {
+	private String progressNotify(Map<String, String> restmap, boolean isQuery) {
 		String json = null;
 		PayInfo payInfo = mPayMapper.queryByOTN(restmap.get("out_trade_no"));
 		payInfo.setmNotifyState(1);
-		if (verifyNotify(restmap, payInfo)) { // 订单支付成功
-			payInfo.setmBankType(restmap.get("bank_type"));
-			payInfo.setmTransactionId(restmap.get("transaction_id"));
-			payInfo.setmTimeEnd(restmap.get("time_end"));
-			payInfo.setmCashFee(restmap.get("cash_fee"));
-			payInfo.setmPayState(1);
-			Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
+		if (verifyNotify(restmap, payInfo, isQuery)) { // 订单支付成功
+			Observable.just(restmap).subscribeOn(Schedulers.io()).subscribe(new Action1<Map<String, String>>() {
 				@Override
-				public void call(String arg0) {
-					mPayMapper.updatePayInfo(payInfo);
+				public void call(Map<String, String> arg0) {
+					synchronized (payInfo) {
+						payInfo.setmBankType(restmap.get("bank_type"));
+						payInfo.setmTransactionId(restmap.get("transaction_id"));
+						payInfo.setmTimeEnd(restmap.get("time_end"));
+						payInfo.setmCashFee(restmap.get("cash_fee"));
+						payInfo.setmPayState(1);
+						if (!isNotified(restmap)) {
+							mPayMapper.updatePayInfo(payInfo);
+						}
+					}
 				}
 			});
 			// 订单状态：支付成功
@@ -512,5 +540,25 @@ public class PayController {
 					SerializerFeatureUtil.FEATURES);
 		}
 		return json;
+	}
+
+	/**
+	 * 获取仿真系统的签名
+	 * 
+	 * @param parm
+	 * @throws XmlPullParserException
+	 * @throws IOException
+	 */
+	public static void getSandParams(Map<String, String> parm) throws XmlPullParserException, IOException {
+		Map<String, String> sandParm = new HashMap<String, String>();
+		sandParm.put("mch_id", ConstValue.MCH_ID);
+		sandParm.put("nonce_str", parm.get("nonce_str"));
+		sandParm.put("sign", parm.get("sign"));
+		String sandRestxml = HttpUtils.post(ConstValue.SANDBOX_SIGN, XmlUtil.xmlFormat(parm, false));
+		Map<String, String> sandRestmap = null;
+		sandRestmap = XmlUtil.xmlParse(sandRestxml);
+		if (null == API_KEY) {
+			API_KEY = sandRestmap.get("sandbox_signkey");
+		}
 	}
 }

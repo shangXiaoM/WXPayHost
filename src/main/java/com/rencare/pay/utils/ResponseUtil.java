@@ -6,7 +6,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.rencare.pay.Application;
-
+import com.rencare.pay.controller.PayController;
 
 public class ResponseUtil {
 	private static final Logger LOG = Logger.getLogger(Application.class);
@@ -24,10 +24,10 @@ public class ResponseUtil {
 		boolean flag = false;
 		if (CollectionUtil.isNotEmpty(restmap)) { // 应答不为null
 			if (ConstValue.PAY_SUCCESS.equals(restmap.get("return_code"))) {
-				String sign = restmap.get("sign"); // 返回的签名
-				restmap.remove("sign");
 				try {
-					String signnow = PayUtil.getSign(restmap, ConstValue.API_SECRET);
+					String sign = restmap.get("sign"); // 返回的签名
+					restmap.remove("sign");
+					String signnow = PayUtil.getSign(restmap, PayController.API_KEY);
 					if (signnow.equals(sign)) { // 签名成功
 						flag = true;
 					} else {

@@ -54,7 +54,9 @@
 		transaction_id =
 		#{mTransactionId},
 		time_end = #{mTimeEnd},
-		cash_fee = #{mCashFee}
+		cash_fee = #{mCashFee},
+		pay_state = #{mPayState},
+		notify_state = #{mNotifyState}
 		where
 		id = #{id}
 	</update>
