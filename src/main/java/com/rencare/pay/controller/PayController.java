@@ -102,11 +102,11 @@ public class PayController {
 			parm.put("notify_url", ConstValue.NOTIFY_URL); // 微信服务器异步通知支付结果地址
 			parm.put("trade_type", "APP"); // 支付类型：APP支付
 			parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 签名
-			// // 对接仿真系统测试
-			// SANDBOX_KEY = null;
-			// getSandParams(parm);
-			// parm.remove("sign");
-			// parm.put("sign", PayUtil.getSign(parm, SANDBOX_KEY)); // 再签名
+//			// 对接仿真系统测试
+//			API_KEY = null;
+//			getSandParams(parm);
+//			parm.remove("sign");
+//			parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 再签名
 
 			String restxml = HttpUtils.post(ConstValue.ORDER_PAY, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
