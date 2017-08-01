@@ -10,7 +10,7 @@ public class ConstValue {
     public static final String PAY_FAIL = "FAIL";
     
     //微信支付成功后通知地址 必须要求80端口并且地址不能带参数
-  	public static final String NOTIFY_URL = "http://jdaiaj.natappfree.cc/rencare/pay/notify";
+  	public static final String NOTIFY_URL = "http://120.25.76.39:8686/WXPay/rencare/pay/notify";
   	
   	public static final String SANDBOX_SIGN = "https://api.mch.weixin.qq.com/sandboxnew/pay/getsignkey"; // 仿真系统获取签名的URL
     

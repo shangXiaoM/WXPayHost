@@ -33,10 +33,6 @@ import com.rencare.pay.utils.StringUtil;
 import com.rencare.pay.utils.WebUtil;
 import com.rencare.pay.utils.XmlUtil;
 
-import rx.Observable;
-import rx.functions.Action1;
-import rx.schedulers.Schedulers;
-
 @RestController
 @RequestMapping("/rencare")
 public class PayController {
@@ -95,18 +91,18 @@ public class PayController {
 			parm.put("device_info", "WEB"); // 设备号，默认为“WEB”
 			parm.put("nonce_str", PayUtil.getNonceStr()); // 随机数
 			parm.put("body", body); // 商品描述
-			parm.put("attach", "XXXX公司"); // 附加信息
+			parm.put("attach", "瑞康宏业"); // 附加信息
 			parm.put("out_trade_no", mchTradeNo); // 商户内部管控的订单号
 			parm.put("total_fee", total_fee); // 总费用：单位-分
 			parm.put("spbill_create_ip", PayUtil.getRemoteAddrIp(request)); // 获取客户端的IP地址
 			parm.put("notify_url", ConstValue.NOTIFY_URL); // 微信服务器异步通知支付结果地址
 			parm.put("trade_type", "APP"); // 支付类型：APP支付
 			parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 签名
-//			// 对接仿真系统测试
-//			API_KEY = null;
-//			getSandParams(parm);
-//			parm.remove("sign");
-//			parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 再签名
+			// // 对接仿真系统测试
+			// API_KEY = null;
+			// getSandParams(parm);
+			// parm.remove("sign");
+			// parm.put("sign", PayUtil.getSign(parm, API_KEY)); // 再签名
 
 			String restxml = HttpUtils.post(ConstValue.ORDER_PAY, XmlUtil.xmlFormat(parm, false));
 			restmap = XmlUtil.xmlParse(restxml);
@@ -129,12 +125,8 @@ public class PayController {
 				payMap.put("timestamp", PayUtil.payTimestamp());
 				try {
 					payMap.put("sign", PayUtil.getSign(payMap, API_KEY));
-					Observable.just("").subscribeOn(Schedulers.io()).subscribe(new Action1<String>() {
-						@Override
-						public void call(String arg0) {
-							insertPayInfo(body, mchTradeNo, prepayId, total_fee, "APP");
-						}
-					});
+					insertPayInfo(body, mchTradeNo, prepayId, total_fee, "APP");
+					LOG.info("下单成功");
 				} catch (Exception e) {
 					e.printStackTrace();
 					flag = false;
@@ -514,21 +506,17 @@ public class PayController {
 		PayInfo payInfo = mPayMapper.queryByOTN(restmap.get("out_trade_no"));
 		payInfo.setmNotifyState(1);
 		if (verifyNotify(restmap, payInfo, isQuery)) { // 订单支付成功
-			Observable.just(restmap).subscribeOn(Schedulers.io()).subscribe(new Action1<Map<String, String>>() {
-				@Override
-				public void call(Map<String, String> arg0) {
-					synchronized (payInfo) {
-						payInfo.setmBankType(restmap.get("bank_type"));
-						payInfo.setmTransactionId(restmap.get("transaction_id"));
-						payInfo.setmTimeEnd(restmap.get("time_end"));
-						payInfo.setmCashFee(restmap.get("cash_fee"));
-						payInfo.setmPayState(1);
-						if (!isNotified(restmap)) {
-							mPayMapper.updatePayInfo(payInfo);
-						}
-					}
+			synchronized (payInfo) {
+				payInfo.setmBankType(restmap.get("bank_type"));
+				payInfo.setmTransactionId(restmap.get("transaction_id"));
+				payInfo.setmTimeEnd(restmap.get("time_end"));
+				payInfo.setmCashFee(restmap.get("cash_fee"));
+				payInfo.setmPayState(1);
+				if (!isNotified(restmap)) {
+					mPayMapper.updatePayInfo(payInfo);
+					LOG.info("支付成功，更新支付状态");
 				}
-			});
+			}
 			// 订单状态：支付成功
 			json = JSON.toJSONString(
 					new JsonResult(ConstValue.RESPONSE_CODE_QUERY_PAID_SUCCESS, "订单支付成功", new ResponseData()),
