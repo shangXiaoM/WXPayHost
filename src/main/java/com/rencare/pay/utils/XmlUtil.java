@@ -73,7 +73,7 @@ public class XmlUtil {
 			 // pull
 			XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
 			XmlPullParser pullParser = factory.newPullParser();
-			pullParser.setInput(inputStream, "UTF-8"); // 为xml设置要解析的xml数据
+			pullParser.setInput(inputStream, "GBK"); // 为xml设置要解析的xml数据
 			int eventType = pullParser.getEventType();
 
 			while (eventType != XmlPullParser.END_DOCUMENT) {

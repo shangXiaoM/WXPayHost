@@ -31,7 +31,7 @@ public class ResponseUtil {
 					if (signnow.equals(sign)) { // 签名成功
 						flag = true;
 					} else {
-						LOG.info("返回的签名错误！");
+						LOG.info("返回的签名错误：返回签名" + sign + "计算签名：" + signnow + "API-KEY:" + PayController.API_KEY);
 					}
 				} catch (UnsupportedEncodingException e) {
 					e.printStackTrace();
